@@ -81,6 +81,44 @@ From _any_ component in your app, use a `<Pod />` to teleport content to a porta
 2. **`<Pod />`**: Registers its `children` snippet to the registry key matching its `to` prop.
 3. **`<Portal />`**: Listens to the registry and renders all snippets registered to its `name`.
 
+## 🛡️ Type Safety (Optional)
+
+By default, `svelte-bay` works with any string for portal names. If you want **full type safety and autocomplete**, you can use our Vite plugin.
+
+### Automatic Type Generation ⚡️
+
+1. Add the plugin to your `vite.config.ts`:
+
+```ts
+import { sveltekit } from "@sveltejs/kit/vite";
+import { defineConfig } from "vite";
+import { svelteBay } from "svelte-bay/vite";
+
+export default defineConfig({
+  plugins: [sveltekit(), svelteBay()],
+});
+```
+
+2. Run your dev server (`npm run dev`).
+3. A `src/svelte-bay.d.ts` file will be generated automatically.
+4. Now `<Pod to="...">` and `<Portal name="...">` will autocomplete with your portal names!
+
+### Manual Registry 🛠️
+
+If you prefer not to use the plugin, you can manually define your portal names in your `src/app.d.ts`:
+
+```ts
+// src/app.d.ts
+import "svelte-bay";
+
+declare module "svelte-bay" {
+  interface PortalRegistry {
+    header: boolean;
+    sidebar: boolean;
+  }
+}
+```
+
 ## 📄 License
 
 MIT

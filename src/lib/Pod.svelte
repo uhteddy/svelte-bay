@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { getBayState } from './portal-state.svelte.js';
 	import { type Snippet, untrack } from 'svelte';
+	import type { PortalName } from './types.js';
 
-	let { to, children }: { to: string; children: Snippet } = $props();
+	let { to, children }: { to: PortalName; children: Snippet } = $props();
 
 	const portalState = getBayState();
 

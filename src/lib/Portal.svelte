@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { getBayState } from './portal-state.svelte.js';
+	import type { PortalName } from './types.js';
 
-	let { name }: { name: string } = $props();
+	let { name }: { name: PortalName } = $props();
 
 	const portalState = getBayState();
 </script>
