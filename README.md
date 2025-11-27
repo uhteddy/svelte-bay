@@ -1,58 +1,86 @@
-# Svelte library
+# 🏝️ Svelte Bay
 
-Everything you need to build a Svelte library, powered by [`sv`](https://npmjs.com/package/sv).
+**The simplest, most developer-friendly portal system for Svelte 5.**
 
-Read more about creating a library [in the docs](https://svelte.dev/docs/kit/packaging).
+`svelte-bay` allows you to easily teleport content from anywhere in your app to specific "bays" (portals) in your layout using the power of Svelte 5 Runes and Context.
 
-## Creating a project
+## ✨ Features
 
-If you're seeing this, you've probably already done this step. Congrats!
+- **🚀 Zero Config**: Just initialize and go.
+- **⚡️ Svelte 5 Ready**: Built with Runes (`$state`, `$effect`) for maximum performance.
+- **🛡️ SSR Safe**: Uses `setContext` to ensure state is scoped to the current request tree.
+- **📦 Multi-Pod Support**: Stack multiple pods into a single portal bay.
 
-```sh
-# create a new project in the current directory
-npx sv create
+## 📦 Installation
 
-# create a new project in my-app
-npx sv create my-app
+```bash
+npm install svelte-bay
+# or
+bun add svelte-bay
 ```
 
-## Developing
+## 🛠️ Usage
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+### 1. Initialize the Bay System
 
-```sh
-npm run dev
+In your root layout (usually `src/routes/+layout.svelte`), initialize the system. This sets up the context for your app.
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+```svelte
+<script lang="ts">
+  import { createBay } from 'svelte-bay';
+
+  // Initialize the bay system once at the root
+  createBay();
+
+  let { children } = $props();
+</script>
+
+{@render children()}
 ```
 
-Everything inside `src/lib` is part of your library, everything inside `src/routes` can be used as a showcase or preview app.
+### 2. Create a Portal (The Destination)
 
-## Building
+Place a `<Portal />` wherever you want content to appear. Give it a unique `name`.
 
-To build your library:
+```svelte
+<script>
+  import { Portal } from 'svelte-bay';
+</script>
 
-```sh
-npm pack
+<header class="flex justify-between p-4">
+  <h1>My App</h1>
+
+  <!-- Content sent to 'header-actions' will appear here -->
+  <div class="actions">
+    <Portal name="header-actions" />
+  </div>
+</header>
 ```
 
-To create a production version of your showcase app:
+### 3. Send Content via a Pod (The Source)
 
-```sh
-npm run build
+From _any_ component in your app, use a `<Pod />` to teleport content to a portal.
+
+```svelte
+<script>
+  import { Pod } from 'svelte-bay';
+</script>
+
+<Pod to="header-actions">
+  <button class="btn-primary">Save Changes</button>
+</Pod>
+
+<Pod to="header-actions">
+  <button class="btn-secondary">Cancel</button>
+</Pod>
 ```
 
-You can preview the production build with `npm run preview`.
+## 💡 How it Works
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+1. **`createBay()`**: Creates a reactive `$state` registry and shares it via `setContext`.
+2. **`<Pod />`**: Registers its `children` snippet to the registry key matching its `to` prop.
+3. **`<Portal />`**: Listens to the registry and renders all snippets registered to its `name`.
 
-## Publishing
+## 📄 License
 
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
-
-To publish your library to [npm](https://www.npmjs.com):
-
-```sh
-npm publish
-```
+MIT
