@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getBayState } from './portal-state.svelte.js';
-	import type { Snippet } from 'svelte';
+	import { type Snippet, untrack } from 'svelte';
 
 	let { to, children }: { to: string; children: Snippet } = $props();
 
@@ -10,10 +10,12 @@
 		const target = to;
 		const snippet = children;
 
-		if (!portalState.content[target]) {
-			portalState.content[target] = [];
-		}
-		portalState.content[target].push(snippet);
+		untrack(() => {
+			if (!portalState.content[target]) {
+				portalState.content[target] = [];
+			}
+			portalState.content[target].push(snippet);
+		});
 
 		return () => {
 			const list = portalState.content[target];
