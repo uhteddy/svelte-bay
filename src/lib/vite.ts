@@ -61,7 +61,12 @@ export function svelteBay(): Plugin {
 			const names = extractPortalNames(files);
 			const dtsContent = generateDts(names);
 			
-			const dtsPath = path.join(srcDir, 'svelte-bay.d.ts');
+			const typeDir = path.join(root, '.svelte-kit', 'types');
+			if (!fs.existsSync(typeDir)) {
+				fs.mkdirSync(typeDir, { recursive: true });
+			}
+
+			const dtsPath = path.join(typeDir, 'svelte-bay.d.ts');
 			fs.writeFileSync(dtsPath, dtsContent);
 		} catch (e) {
 			console.error('[svelte-bay] Failed to update types:', e);
