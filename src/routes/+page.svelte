@@ -1,12 +1,20 @@
-<script lang="ts">
-    import { Pod } from '../lib';
-    const { children } = $props();
-</script>
+<div class="p-8 max-w-2xl mx-auto">
+	<h1 class="text-3xl font-bold mb-6">Svelte Bay Tests</h1>
+	
+	<div class="grid gap-4">
+		<a href="/tests/multiple-portals" class="block p-4 border rounded hover:bg-gray-50 transition-colors">
+			<h2 class="font-semibold text-lg">Multiple Portals</h2>
+			<p class="text-gray-600">Testing multiple portals with the same name.</p>
+		</a>
 
-<Pod to="header">
-    <p>TEST</p>
-</Pod>
+		<a href="/tests/conditional-pods" class="block p-4 border rounded hover:bg-gray-50 transition-colors">
+			<h2 class="font-semibold text-lg">Conditional Pods</h2>
+			<p class="text-gray-600">Testing conditional rendering of Pods.</p>
+		</a>
 
-<h1>Welcome to your library project</h1>
-<p>Create your package using @sveltejs/package and preview/showcase your work with SvelteKit</p>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+		<a href="/tests/nested-portals" class="block p-4 border rounded hover:bg-gray-50 transition-colors">
+			<h2 class="font-semibold text-lg">Nested Portals</h2>
+			<p class="text-gray-600">Testing portals inside other portals.</p>
+		</a>
+	</div>
+</div>

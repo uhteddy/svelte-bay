@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createBay, Portal } from '../lib';
+	import { createBay, Portal } from '../lib/index.js';
     const { children } = $props();
 	createBay();
 </script>
