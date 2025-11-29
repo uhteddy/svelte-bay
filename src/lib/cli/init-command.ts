@@ -125,7 +125,7 @@ export async function initCommand(): Promise<void> {
 			printNextSteps();
 			return;
 		} catch (error) {
-			console.log(chalk.red(`\n❌ Error creating layout file: ${error}`));
+			console.log(chalk.red(`\n❌ Error creating layout file: ${error instanceof Error ? error.message : String(error)}`));
 			process.exit(1);
 		}
 	}
