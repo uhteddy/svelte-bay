@@ -193,3 +193,65 @@ export function addCreateBayCall(filePath: string, analysis: SvelteFileAnalysis)
 
 	writeFileSync(filePath, before + newScriptContent + after, 'utf-8');
 }
+
+/**
+ * Package manager types
+ */
+export type PackageManager = 'npm' | 'bun' | 'pnpm' | 'yarn';
+
+/**
+ * Detect which package manager is being used in the project
+ */
+export function detectPackageManager(projectRoot: string): PackageManager | null {
+	// Check for lock files to determine package manager
+	if (existsSync(join(projectRoot, 'bun.lockb')) || existsSync(join(projectRoot, 'bun.lock'))) {
+		return 'bun';
+	}
+	if (existsSync(join(projectRoot, 'pnpm-lock.yaml'))) {
+		return 'pnpm';
+	}
+	if (existsSync(join(projectRoot, 'yarn.lock'))) {
+		return 'yarn';
+	}
+	if (existsSync(join(projectRoot, 'package-lock.json'))) {
+		return 'npm';
+	}
+
+	// Default to npm if no lock file found
+	return null;
+}
+
+/**
+ * Check if svelte-bay is already installed in package.json
+ */
+export function isSvelteBayInstalled(projectRoot: string): boolean {
+	const packageJsonPath = join(projectRoot, 'package.json');
+	
+	if (!existsSync(packageJsonPath)) {
+		return false;
+	}
+
+	try {
+		const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+		const dependencies = packageJson.dependencies || {};
+		const devDependencies = packageJson.devDependencies || {};
+
+		return 'svelte-bay' in dependencies || 'svelte-bay' in devDependencies;
+	} catch (error) {
+		return false;
+	}
+}
+
+/**
+ * Get the install command for a package manager
+ */
+export function getInstallCommand(packageManager: PackageManager): string {
+	const commands: Record<PackageManager, string> = {
+		npm: 'npm install svelte-bay',
+		bun: 'bun add svelte-bay',
+		pnpm: 'pnpm add svelte-bay',
+		yarn: 'yarn add svelte-bay'
+	};
+
+	return commands[packageManager];
+}

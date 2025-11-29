@@ -2,6 +2,7 @@ import prompts from 'prompts';
 import chalk from 'chalk';
 import { dirname, join } from 'path';
 import { mkdirSync } from 'fs';
+import { spawn } from 'child_process';
 import {
 	findSvelteKitRoot,
 	findRootLayout,
@@ -9,7 +10,11 @@ import {
 	createLayoutWithBay,
 	addScriptTagWithBay,
 	addCreateBayImport,
-	addCreateBayCall
+	addCreateBayCall,
+	detectPackageManager,
+	isSvelteBayInstalled,
+	getInstallCommand,
+	type PackageManager
 } from './file-utils.js';
 
 export async function initCommand(): Promise<void> {
@@ -32,7 +37,52 @@ export async function initCommand(): Promise<void> {
 
 	console.log(chalk.green(`✓ Found SvelteKit project at: ${chalk.cyan(projectRoot)}`));
 
-	// Step 2: Find or create +layout.svelte
+	// Step 2: Check if svelte-bay is installed, install if not
+	const isInstalled = isSvelteBayInstalled(projectRoot);
+
+	if (!isInstalled) {
+		console.log(chalk.yellow('\n→ svelte-bay is not installed in this project'));
+
+		// Detect package manager
+		const detectedPM = detectPackageManager(projectRoot);
+		const packageManagers: PackageManager[] = ['npm', 'bun', 'pnpm', 'yarn'];
+
+		// Prompt user to select package manager
+		const pmResponse = await prompts({
+			type: 'select',
+			name: 'packageManager',
+			message: 'Which package manager would you like to use?',
+			choices: packageManagers.map((pm) => ({
+				title: pm === detectedPM ? `${pm} (detected)` : pm,
+				value: pm
+			})),
+			initial: detectedPM ? packageManagers.indexOf(detectedPM) : 0
+		});
+
+		if (!pmResponse.packageManager) {
+			console.log(chalk.gray('\nSetup cancelled.'));
+			process.exit(0);
+		}
+
+		const selectedPM: PackageManager = pmResponse.packageManager;
+		const installCmd = getInstallCommand(selectedPM);
+
+		console.log(chalk.blue(`\n→ Installing svelte-bay with ${selectedPM}...`));
+		console.log(chalk.gray(`   Running: ${installCmd}`));
+
+		try {
+			await runCommand(installCmd, projectRoot);
+			console.log(chalk.green('✓ svelte-bay installed successfully'));
+		} catch (error) {
+			console.log(chalk.red(`\n❌ Error installing svelte-bay: ${error}`));
+			console.log(chalk.gray(`\n   You can install it manually with: ${chalk.cyan(installCmd)}`));
+			process.exit(1);
+		}
+	} else {
+		console.log(chalk.green('✓ svelte-bay is already installed'));
+	}
+
+	// Step 3: Find or create +layout.svelte
 	let layoutPath = findRootLayout(projectRoot);
 
 	if (!layoutPath) {
@@ -138,6 +188,35 @@ export async function initCommand(): Promise<void> {
 
 	console.log(chalk.green.bold('\n✓ Initialization complete!'));
 	printNextSteps();
+}
+
+/**
+ * Helper function to run shell commands
+ */
+function runCommand(command: string, cwd: string): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const parts = command.split(' ');
+		const cmd = parts[0];
+		const args = parts.slice(1);
+
+		const child = spawn(cmd, args, {
+			cwd,
+			stdio: 'inherit',
+			shell: true
+		});
+
+		child.on('error', (error) => {
+			reject(error);
+		});
+
+		child.on('exit', (code) => {
+			if (code === 0) {
+				resolve();
+			} else {
+				reject(new Error(`Command exited with code ${code}`));
+			}
+		});
+	});
 }
 
 function printNextSteps(): void {

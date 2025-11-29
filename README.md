@@ -21,21 +21,21 @@ bun add svelte-bay
 
 ## ⚡️ Quick Start with CLI
 
-The easiest way to get started is using our CLI tool:
+The easiest way to get started - **one command does it all**:
 
 ```bash
-# Install the package
-npm install svelte-bay
-
-# Run the init command in your SvelteKit project
+# Run this in your SvelteKit project directory
 npx svelte-bay init
 ```
 
 The CLI will:
 
+- ✅ Automatically install `svelte-bay` (asks which package manager to use)
 - ✅ Find your root `+layout.svelte` (or create it if missing)
 - ✅ Add the `createBay()` import and call
 - ✅ Handle all edge cases intelligently
+
+That's it! You're ready to use `<Portal>` and `<Pod>` components.
 
 ## 🛠️ Usage
 
