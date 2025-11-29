@@ -42,6 +42,10 @@
   <Portal name={portalName} />
 </div>
 
+<div data-testid="new-portal">
+  <Portal name="new-portal" />
+</div>
+
 <Pod to={targetPortal}>
   {podContent}
 </Pod>

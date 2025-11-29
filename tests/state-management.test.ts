@@ -55,7 +55,7 @@ describe('State Management - untrack() Behavior', () => {
 
 	test('changing Pod target properly unregisters from old portal', async () => {
 		// Verify that when a Pod changes its target portal,
-		// it properly cleans up from the old portal
+		// it properly cleans up from the old portal and moves to the new one
 		const component = render(TestPodEffectTracking, {
 			portalName: 'original-portal',
 			content: 'Moving Content'
@@ -64,8 +64,10 @@ describe('State Management - untrack() Behavior', () => {
 		await new Promise(resolve => setTimeout(resolve, 100));
 
 		// Content should be in the original portal
-		let portal = document.querySelector('[data-testid="portal"]');
-		expect(portal?.textContent).toContain('Moving Content');
+		let originalPortal = document.querySelector('[data-testid="portal"]');
+		let newPortal = document.querySelector('[data-testid="new-portal"]');
+		expect(originalPortal?.textContent).toContain('Moving Content');
+		expect(newPortal?.textContent).not.toContain('Moving Content');
 
 		// Change the Pod's target
 		const updateButton = document.querySelector('[data-testid="update-target"]');
@@ -74,8 +76,12 @@ describe('State Management - untrack() Behavior', () => {
 		await new Promise(resolve => setTimeout(resolve, 100));
 
 		// Original portal should no longer have the content
-		portal = document.querySelector('[data-testid="portal"]');
-		expect(portal?.textContent).not.toContain('Moving Content');
+		originalPortal = document.querySelector('[data-testid="portal"]');
+		expect(originalPortal?.textContent).not.toContain('Moving Content');
+
+		// New portal should now have the content
+		newPortal = document.querySelector('[data-testid="new-portal"]');
+		expect(newPortal?.textContent).toContain('Moving Content');
 	});
 });
 
