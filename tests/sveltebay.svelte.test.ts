@@ -217,11 +217,6 @@ describe('Edge Cases', () => {
 		portal = document.querySelector('[data-testid="portal"]');
 		expect(portal).toBeFalsy();
 
-		// Verify the portal content is not in the document
-		const bodyText = document.body.textContent || '';
-		// Content should not appear in the portal location anymore
-		const portalContent = document.querySelector('[data-testid="portal"]');
-		expect(portalContent).toBeNull();
 	});
 
 	test('updates portal content when pod content changes', async () => {
