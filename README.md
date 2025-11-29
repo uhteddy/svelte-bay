@@ -19,9 +19,29 @@ npm install svelte-bay
 bun add svelte-bay
 ```
 
+## ⚡️ Quick Start with CLI
+
+The easiest way to get started is using our CLI tool:
+
+```bash
+# Install the package
+npm install svelte-bay
+
+# Run the init command in your SvelteKit project
+npx svelte-bay init
+```
+
+The CLI will:
+
+- ✅ Find your root `+layout.svelte` (or create it if missing)
+- ✅ Add the `createBay()` import and call
+- ✅ Handle all edge cases intelligently
+
 ## 🛠️ Usage
 
 ### 1. Initialize the Bay System
+
+> **💡 Tip**: You can skip this step by running `npx svelte-bay init`
 
 In your root layout (usually `src/routes/+layout.svelte`), initialize the system. This sets up the context for your app.
 

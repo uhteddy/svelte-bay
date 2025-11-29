@@ -10,6 +10,9 @@
   "repository": "https://github.com/uhteddy/svelte-bay",
   "homepage": "https://github.com/uhteddy/svelte-bay#readme",
   "bugs": "https://github.com/uhteddy/svelte-bay/issues",
+  "bin": {
+    "svelte-bay": "./dist/cli.js"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build && bun run prepack",
@@ -51,6 +54,7 @@
     "@sveltejs/package": "^2.5.6",
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@types/node": "^24.10.1",
+    "@types/prompts": "^2.4.9",
     "@vitest/browser-playwright": "^4.0.10",
     "playwright": "^1.56.1",
     "publint": "^0.3.15",
@@ -79,5 +83,10 @@
   ],
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "commander": "^14.0.2",
+    "prompts": "^2.4.2"
   }
 }
