@@ -164,7 +164,8 @@ export function addCreateBayImport(filePath: string, analysis: SvelteFileAnalysi
 		const importMatch = importStatement.match(/import\s+{([^}]+)}\s+from\s+['"]svelte-bay['"]/);
 		if (importMatch) {
 			const existingImports = importMatch[1].trim();
-			const newImportStatement = `import { createBay, ${existingImports} } from 'svelte-bay'`;
+			const imports = existingImports.split(',').map(s => s.trim()).filter(s => s !== 'createBay');
+			const newImportStatement = `import { createBay${imports.length ? ', ' + imports.join(', ') : ''} } from 'svelte-bay'`;
 
 			writeFileSync(filePath, before + newImportStatement + after, 'utf-8');
 		}
