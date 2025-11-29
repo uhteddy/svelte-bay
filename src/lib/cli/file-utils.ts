@@ -20,16 +20,20 @@ export interface SvelteFileAnalysis {
  */
 export function findSvelteKitRoot(startDir: string = process.cwd()): string | null {
 	let currentDir = resolve(startDir);
-	const root = resolve('/');
 
-	while (currentDir !== root) {
+	while (true) {
 		if (
 			existsSync(join(currentDir, 'svelte.config.js')) ||
 			existsSync(join(currentDir, 'svelte.config.ts'))
 		) {
 			return currentDir;
 		}
-		currentDir = resolve(currentDir, '..');
+		const parentDir = resolve(currentDir, '..');
+		if (parentDir === currentDir) {
+			// Reached filesystem root
+			break;
+		}
+		currentDir = parentDir;
 	}
 
 	return null;
