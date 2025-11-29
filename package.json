@@ -12,6 +12,7 @@
     "test:unit": "vitest",
     "test": "npm run test:unit -- --run"
   },
+  "repository": "https://github.com/uhteddy/svelte-bay",
   "files": [
     "dist",
     "!dist/**/*.test.*",
