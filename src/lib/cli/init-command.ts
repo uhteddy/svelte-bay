@@ -21,7 +21,8 @@ import {
 } from './file-utils.js';
 
 export async function initCommand(): Promise<void> {
-	console.log(chalk.blue.bold('\n🌊 Svelte Bay Initialization\n'));
+	console.log(chalk.blue.bold('\n🌊 Svelte Bay Initialization'));
+	console.log(chalk.gray('━'.repeat(50)) + '\n');
 
 	// Step 1: Check for Svelte project
 	const projectRoot = findSvelteKitRoot();
@@ -38,13 +39,18 @@ export async function initCommand(): Promise<void> {
 		process.exit(1);
 	}
 
-	console.log(chalk.green(`✓ Found SvelteKit project at: ${chalk.cyan(projectRoot)}`));
+	console.log(chalk.green(`✓ Found SvelteKit project`));
+	console.log(chalk.gray(`  ${projectRoot}`));
 
 	// Step 2: Check if svelte-bay is installed, install if not
+	console.log('\n' + chalk.gray('─'.repeat(50)));
+	console.log(chalk.blue.bold('📦 Package Installation'));
+	console.log(chalk.gray('─'.repeat(50)) + '\n');
+
 	const isInstalled = isSvelteBayInstalled(projectRoot);
 
 	if (!isInstalled) {
-		console.log(chalk.yellow('\n→ svelte-bay is not installed in this project'));
+		console.log(chalk.yellow('→ svelte-bay is not installed in this project'));
 
 		// Detect package manager
 		const detectedPM = detectPackageManager(projectRoot);
@@ -75,7 +81,7 @@ export async function initCommand(): Promise<void> {
 
 		try {
 			await runCommand(installCmd, projectRoot);
-			console.log(chalk.green('✓ svelte-bay installed successfully'));
+			console.log(chalk.green('\n✓ svelte-bay installed successfully'));
 		} catch (error) {
 			console.log(chalk.red(`\n❌ Error installing svelte-bay: ${error}`));
 			console.log(chalk.gray(`\n   You can install it manually with: ${chalk.cyan(installCmd)}`));
@@ -86,6 +92,10 @@ export async function initCommand(): Promise<void> {
 	}
 
 	// Step 3: Find or create +layout.svelte
+	console.log('\n' + chalk.gray('─'.repeat(50)));
+	console.log(chalk.blue.bold('📝 Layout Configuration'));
+	console.log(chalk.gray('─'.repeat(50)) + '\n');
+
 	let layoutPath = findRootLayout(projectRoot);
 
 	if (!layoutPath) {
@@ -110,8 +120,8 @@ export async function initCommand(): Promise<void> {
 		try {
 			mkdirSync(layoutDir, { recursive: true });
 			createLayoutWithBay(layoutPath);
-			console.log(chalk.green(`\n✓ Created ${chalk.cyan('+layout.svelte')} with svelte-bay setup`));
-			console.log(chalk.green('✓ Initialization complete!'));
+			console.log(chalk.green(`✓ Created ${chalk.cyan('+layout.svelte')} with svelte-bay setup`));
+			printCompletion();
 			printNextSteps();
 			return;
 		} catch (error) {
@@ -120,7 +130,8 @@ export async function initCommand(): Promise<void> {
 		}
 	}
 
-	console.log(chalk.green(`✓ Found +layout.svelte at: ${chalk.cyan(layoutPath)}`));
+	console.log(chalk.green(`✓ Found +layout.svelte`));
+	console.log(chalk.gray(`  ${layoutPath}`));
 
 	// Step 3: Analyze the file
 	const analysis = analyzeSvelteFile(layoutPath);
@@ -142,8 +153,8 @@ export async function initCommand(): Promise<void> {
 		}
 
 		addScriptTagWithBay(layoutPath);
-		console.log(chalk.green('\n✓ Added <script> tag with svelte-bay setup'));
-		console.log(chalk.green('✓ Initialization complete!'));
+		console.log(chalk.green('✓ Added <script> tag with svelte-bay setup'));
+		printCompletion();
 		printNextSteps();
 		return;
 	}
@@ -196,12 +207,11 @@ export async function initCommand(): Promise<void> {
 		const pluginConfigured = isVitePluginConfigured(viteConfigPath);
 
 		if (!pluginConfigured) {
-			console.log(chalk.blue('\n💡 Optional: Type Safety'));
-			console.log(
-				chalk.gray(
-					'   The Vite plugin provides autocomplete for Portal names in your IDE.'
-				)
-			);
+			console.log('\n' + chalk.gray('─'.repeat(50)));
+			console.log(chalk.blue.bold('💡 Optional: Type Safety'));
+			console.log(chalk.gray('─'.repeat(50)));
+			console.log(chalk.gray('The Vite plugin provides autocomplete for Portal names in your IDE.'));
+			console.log();
 
 			const viteResponse = await prompts({
 				type: 'confirm',
@@ -213,28 +223,20 @@ export async function initCommand(): Promise<void> {
 			if (viteResponse.addPlugin) {
 				try {
 					addVitePlugin(viteConfigPath);
-					console.log(chalk.green('✓ Added svelteBay plugin to vite.config'));
-					console.log(
-						chalk.gray(
-							'   Restart your dev server to enable Portal name autocomplete!'
-						)
-					);
+					console.log(chalk.green('\n✓ Added svelteBay plugin to vite.config'));
+					console.log(chalk.gray('  Restart your dev server to enable Portal name autocomplete'));
 				} catch (error) {
-					console.log(
-						chalk.yellow(
-							`⚠ Could not automatically add plugin. You can add it manually:`
-						)
-					);
-					console.log(chalk.gray(`   import { svelteBay } from 'svelte-bay/vite';`));
-					console.log(chalk.gray(`   plugins: [sveltekit(), svelteBay()]`));
+					console.log(chalk.yellow('\n⚠ Could not automatically add plugin. You can add it manually:'));
+					console.log(chalk.gray(`  import { svelteBay } from 'svelte-bay/vite';`));
+					console.log(chalk.gray(`  plugins: [sveltekit(), svelteBay()]`));
 				}
 			}
 		} else {
-			console.log(chalk.green('\n✓ Vite plugin is already configured'));
+			console.log('\n' + chalk.green('✓ Vite plugin is already configured'));
 		}
 	}
 
-	console.log(chalk.green.bold('\n✓ Initialization complete!'));
+	printCompletion();
 	printNextSteps();
 }
 
@@ -265,6 +267,12 @@ function runCommand(command: string, cwd: string): Promise<void> {
 			}
 		});
 	});
+}
+
+function printCompletion(): void {
+	console.log('\n' + chalk.gray('─'.repeat(50)));
+	console.log(chalk.green.bold('✓ Initialization Complete!'));
+	console.log(chalk.gray('─'.repeat(50)));
 }
 
 function printNextSteps(): void {
