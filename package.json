@@ -7,14 +7,9 @@
     "url": "https://github.com/uhteddy"
   },
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/uhteddy/svelte-bay.git"
-  },
+  "repository": "https://github.com/uhteddy/svelte-bay.git",
   "homepage": "https://github.com/uhteddy/svelte-bay#readme",
-  "bugs": {
-    "url": "https://github.com/uhteddy/svelte-bay/issues"
-  },
+  "bugs": "https://github.com/uhteddy/svelte-bay/issues",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build && bun run prepack",
