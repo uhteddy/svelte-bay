@@ -27,9 +27,6 @@
     });
   });
 
-  function getEffectCount() {
-    return effectRunCount;
-  }
 </script>
 
 <div data-testid="portal">
