@@ -67,6 +67,23 @@
     "vitest-browser-svelte": "^2.0.1"
   },
   "keywords": [
-    "svelte"
-  ]
+    "svelte",
+    "svelte5",
+    "sveltekit",
+    "portal",
+    "portals",
+    "teleport",
+    "runes",
+    "context",
+    "ui",
+    "components",
+    "typescript",
+    "ssr",
+    "layout",
+    "slot",
+    "bay"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }
