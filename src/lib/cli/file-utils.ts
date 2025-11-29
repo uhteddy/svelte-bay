@@ -104,7 +104,9 @@ export function analyzeSvelteFile(filePath: string): SvelteFileAnalysis {
 
 				// Check if createBay is in the import
 				const imports = importMatch[1].split(',').map((s) => s.trim());
-				analysis.hasCreateBayImport = imports.includes('createBay');
+				analysis.hasCreateBayImport = imports.some(
+					imp => /^(\s*type\s+)?createBay(\s+as\s+\w+)?$/.test(imp)
+				);
 			}
 
 			// Check for createBay() call
