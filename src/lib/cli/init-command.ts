@@ -142,14 +142,20 @@ export async function initCommand(): Promise<void> {
 	// Step 3: Analyze the file
 	const analysis = analyzeSvelteFile(layoutPath);
 
-	// Step 4: Handle no script tag
+	// Step 4: Handle no instance script tag
 	if (!analysis.hasScriptTag) {
-		console.log(chalk.yellow('\n⚠ No <script> tag found in +layout.svelte'));
+		const hasModule = analysis.hasModuleScriptTag;
+		const message = hasModule 
+			? '⚠ No instance <script> tag found in +layout.svelte (only a module script exists)'
+			: '⚠ No <script> tag found in +layout.svelte';
+		console.log(chalk.yellow(`\n${message}`));
 
 		const response = await prompts({
 			type: 'confirm',
 			name: 'addScript',
-			message: 'Would you like to add one with svelte-bay setup?',
+			message: hasModule
+				? 'Would you like to add an instance script with svelte-bay setup?'
+				: 'Would you like to add one with svelte-bay setup?',
 			initial: true
 		});
 

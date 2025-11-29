@@ -2,11 +2,12 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 
 export interface SvelteFileAnalysis {
-	hasScriptTag: boolean;
-	scriptTagStart: number; // Position in file where script tag starts
-	scriptTagEnd: number; // Position in file where script tag ends
-	scriptContentStart: number; // Position where script content starts (after <script> or <script lang="ts">)
-	scriptContentEnd: number; // Position where script content ends (before </script>)
+	hasScriptTag: boolean; // True if an instance script (non-module) exists
+	hasModuleScriptTag: boolean; // True if a module script exists
+	scriptTagStart: number; // Position in file where instance script tag starts
+	scriptTagEnd: number; // Position in file where instance script tag ends
+	scriptContentStart: number; // Position where instance script content starts (after <script> or <script lang="ts">)
+	scriptContentEnd: number; // Position where instance script content ends (before </script>)
 	hasCreateBayImport: boolean;
 	hasSvelteBayImport: boolean;
 	svelteBayImportLine?: string; // The full import line if exists
@@ -59,14 +60,27 @@ export function findRootLayout(projectRoot: string): string | null {
 	return null;
 }
 
+// Shared regex pattern for detecting module context attribute
+const MODULE_CONTEXT_PATTERN = /context\s*=\s*["']module["']/;
+
+/**
+ * Check if a script tag is a module script (has context="module")
+ */
+function isModuleScript(scriptTag: string): boolean {
+	return MODULE_CONTEXT_PATTERN.test(scriptTag);
+}
+
 /**
  * Analyze a Svelte file to determine its structure and imports
+ * This function specifically looks for instance scripts (non-module) since
+ * createBay uses setContext which only works in instance scripts.
  */
 export function analyzeSvelteFile(filePath: string): SvelteFileAnalysis {
 	const content = readFileSync(filePath, 'utf-8');
 
 	const analysis: SvelteFileAnalysis = {
 		hasScriptTag: false,
+		hasModuleScriptTag: false,
 		scriptTagStart: -1,
 		scriptTagEnd: -1,
 		scriptContentStart: -1,
@@ -76,25 +90,38 @@ export function analyzeSvelteFile(filePath: string): SvelteFileAnalysis {
 		hasCreateBayCall: false
 	};
 
-	// Find script tag (including possible lang attribute)
-	const scriptTagRegex = /<script(\s+[^>]*)?>/i;
-	const scriptTagMatch = content.match(scriptTagRegex);
-
-	if (scriptTagMatch) {
-		analysis.hasScriptTag = true;
-		analysis.scriptTagStart = scriptTagMatch.index!;
-		analysis.scriptContentStart = scriptTagMatch.index! + scriptTagMatch[0].length;
-
-		// Find closing script tag
+	// Find all script tags (including possible lang attribute)
+	const scriptTagRegex = /<script(\s+[^>]*)?>/gi;
+	const matches = content.matchAll(scriptTagRegex);
+	
+	for (const match of matches) {
+		const scriptTag = match[0];
+		const tagStart = match.index!;
+		const contentStart = tagStart + scriptTag.length;
+		
+		// Find the corresponding closing tag
 		const closeScriptRegex = /<\/script>/i;
-		const closeScriptMatch = content.slice(analysis.scriptContentStart).match(closeScriptRegex);
-
-		if (closeScriptMatch) {
-			analysis.scriptContentEnd = analysis.scriptContentStart + closeScriptMatch.index!;
-			analysis.scriptTagEnd = analysis.scriptContentEnd + closeScriptMatch[0].length;
+		const remainingContent = content.slice(contentStart);
+		const closeMatch = remainingContent.match(closeScriptRegex);
+		
+		if (!closeMatch) continue;
+		
+		const contentEnd = contentStart + closeMatch.index!;
+		const tagEnd = contentEnd + closeMatch[0].length;
+		
+		if (isModuleScript(scriptTag)) {
+			// This is a module script - just note its existence
+			analysis.hasModuleScriptTag = true;
+		} else {
+			// This is an instance script - this is what we want
+			analysis.hasScriptTag = true;
+			analysis.scriptTagStart = tagStart;
+			analysis.scriptContentStart = contentStart;
+			analysis.scriptContentEnd = contentEnd;
+			analysis.scriptTagEnd = tagEnd;
 
 			// Extract script content
-			const scriptContent = content.slice(analysis.scriptContentStart, analysis.scriptContentEnd);
+			const scriptContent = content.slice(contentStart, contentEnd);
 
 			// Check for svelte-bay imports
 			const importRegex = /import\s+{([^}]+)}\s+from\s+['"]svelte-bay['"]/s;
@@ -103,7 +130,7 @@ export function analyzeSvelteFile(filePath: string): SvelteFileAnalysis {
 			if (importMatch) {
 				analysis.hasSvelteBayImport = true;
 				analysis.svelteBayImportLine = importMatch[0];
-				analysis.svelteBayImportStart = analysis.scriptContentStart + importMatch.index!;
+				analysis.svelteBayImportStart = contentStart + importMatch.index!;
 				analysis.svelteBayImportEnd = analysis.svelteBayImportStart + importMatch[0].length;
 
 				// Check if createBay is in the import
@@ -115,6 +142,9 @@ export function analyzeSvelteFile(filePath: string): SvelteFileAnalysis {
 
 			// Check for createBay() call
 			analysis.hasCreateBayCall = /createBay\s*\(\s*\)/.test(scriptContent);
+			
+			// Once we find an instance script, we're done
+			break;
 		}
 	}
 
@@ -138,18 +168,60 @@ export function createLayoutWithBay(filePath: string): void {
 }
 
 /**
+ * Find a module script in the content and return its position info
+ * Returns null if no module script is found
+ */
+function findModuleScript(content: string): { start: number; end: number } | null {
+	const scriptTagRegex = /<script(\s+[^>]*)?>/gi;
+	const matches = content.matchAll(scriptTagRegex);
+	
+	for (const match of matches) {
+		const scriptTag = match[0];
+		if (!isModuleScript(scriptTag)) continue;
+		
+		const tagStart = match.index!;
+		const contentStart = tagStart + scriptTag.length;
+		
+		const closeScriptRegex = /<\/script>/i;
+		const remainingContent = content.slice(contentStart);
+		const closeMatch = remainingContent.match(closeScriptRegex);
+		
+		if (!closeMatch) continue;
+		
+		const tagEnd = contentStart + closeMatch.index! + closeMatch[0].length;
+		return { start: tagStart, end: tagEnd };
+	}
+	
+	return null;
+}
+
+/**
  * Add script tag with createBay to existing layout
+ * This handles files that might have a module script - in that case,
+ * the instance script is inserted after the module script.
  */
 export function addScriptTagWithBay(filePath: string): void {
 	const content = readFileSync(filePath, 'utf-8');
 
-	const newContent = `<script>
+	const instanceScript = `<script>
 	import { createBay } from 'svelte-bay';
 
 	createBay();
 </script>
 
-${content}`;
+`;
+
+	// Check if there's a module script we need to insert after
+	const moduleScript = findModuleScript(content);
+	
+	let newContent: string;
+	if (moduleScript) {
+		// Insert instance script after the module script
+		newContent = content.slice(0, moduleScript.end) + '\n\n' + instanceScript + content.slice(moduleScript.end).trimStart();
+	} else {
+		// No module script, prepend to file
+		newContent = instanceScript + content;
+	}
 
 	writeFileSync(filePath, newContent, 'utf-8');
 }
