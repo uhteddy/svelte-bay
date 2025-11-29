@@ -147,7 +147,10 @@ export async function initCommand(): Promise<void> {
 			initial: true
 		});
 
-		if (!response.addScript) {
+		if (response.addScript === undefined) {
+			console.log(chalk.gray('\nPrompt aborted. Exiting setup.'));
+			process.exit(1);
+		} else if (response.addScript === false) {
 			console.log(chalk.gray('\nSetup cancelled. You can manually add the script tag later.'));
 			process.exit(0);
 		}
