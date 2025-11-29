@@ -106,7 +106,13 @@ export async function initCommand(): Promise<void> {
 			name: 'createLayout',
 			message: 'Would you like to create one?',
 			initial: true
-		});
+		}, {
+			onCancel: () => {
+				console.log(chalk.gray('\nSetup cancelled. You can run this command again later.'));
+				process.exit(0);
+			}
+		}
+	);
 
 		if (!response.createLayout) {
 			console.log(chalk.gray('\nSetup cancelled. You can run this command again later.'));
