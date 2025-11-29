@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createBay } from "../../src/lib/index.ts";
+  import { createBay, getBayState } from "../../src/lib/index.ts";
   import Portal from "../../src/lib/Portal.svelte";
   import Pod from "../../src/lib/Pod.svelte";
   import { untrack } from "svelte";
@@ -18,9 +18,13 @@
 
   // Create the bay context for testing
   createBay();
+  const bayState = getBayState();
 
-  // Track effect runs
+  // Track effect runs when Portal-Pod state changes
+  // This effect observes the portal content array to test actual Portal-Pod behavior
   $effect(() => {
+    // Track the portal content array - this is the reactive state we want to observe
+    const _ = bayState.content[portalName];
     untrack(() => {
       effectRunCount++;
       onEffectRun?.();
