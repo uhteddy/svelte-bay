@@ -154,7 +154,11 @@ ${content}`;
 export function addCreateBayImport(filePath: string, analysis: SvelteFileAnalysis): void {
 	const content = readFileSync(filePath, 'utf-8');
 
-	if (analysis.hasSvelteBayImport && analysis.svelteBayImportStart !== undefined) {
+	if (
+		analysis.hasSvelteBayImport &&
+		analysis.svelteBayImportStart !== undefined &&
+		analysis.svelteBayImportEnd !== undefined
+	) {
 		// Add createBay to existing svelte-bay import
 		const before = content.slice(0, analysis.svelteBayImportStart);
 		const importStatement = content.slice(analysis.svelteBayImportStart, analysis.svelteBayImportEnd);
