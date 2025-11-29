@@ -255,3 +255,102 @@ export function getInstallCommand(packageManager: PackageManager): string {
 
 	return commands[packageManager];
 }
+
+/**
+ * Find vite.config file (js or ts)
+ */
+export function findViteConfig(projectRoot: string): string | null {
+	const possiblePaths = [
+		join(projectRoot, 'vite.config.ts'),
+		join(projectRoot, 'vite.config.js')
+	];
+
+	for (const path of possiblePaths) {
+		if (existsSync(path)) {
+			return path;
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Check if svelteBay vite plugin is already configured
+ */
+export function isVitePluginConfigured(viteConfigPath: string): boolean {
+	try {
+		const content = readFileSync(viteConfigPath, 'utf-8');
+		
+		// Check for import
+		const hasImport = /import\s+{[^}]*svelteBay[^}]*}\s+from\s+['"]svelte-bay\/vite['"]/.test(content) ||
+			/import\s+{[^}]*svelteBay[^}]*}\s+from\s+["']svelte-bay\/vite["']/.test(content);
+		
+		// Check for plugin usage
+		const hasPlugin = /svelteBay\s*\(\s*\)/.test(content);
+		
+		return hasImport && hasPlugin;
+	} catch (error) {
+		return false;
+	}
+}
+
+/**
+ * Add svelteBay plugin to vite.config
+ */
+export function addVitePlugin(viteConfigPath: string): void {
+	const content = readFileSync(viteConfigPath, 'utf-8');
+	
+	// Check if svelte-bay/vite import already exists
+	const hasImport = /import.*from\s+['"]svelte-bay\/vite['"]/.test(content);
+	
+	let newContent = content;
+	
+	if (!hasImport) {
+		// Add import after existing imports
+		// Find the last import statement
+		const importMatches = Array.from(content.matchAll(/^import\s+.+from\s+.+;$/gm));
+		
+		if (importMatches.length > 0) {
+			const lastImport = importMatches[importMatches.length - 1];
+			const insertPos = lastImport.index! + lastImport[0].length;
+			
+			const importStatement = "\nimport { svelteBay } from 'svelte-bay/vite';";
+			newContent = content.slice(0, insertPos) + importStatement + content.slice(insertPos);
+		} else {
+			// No imports found, add at the top
+			newContent = "import { svelteBay } from 'svelte-bay/vite';\n" + content;
+		}
+	}
+	
+	// Add plugin to the plugins array
+	// Find the plugins array
+	const pluginsMatch = newContent.match(/plugins:\s*\[([\s\S]*?)\]/);
+	
+	if (pluginsMatch) {
+		const pluginsContent = pluginsMatch[1];
+		const pluginsStart = pluginsMatch.index! + pluginsMatch[0].indexOf('[') + 1;
+		
+		// Check if there are already plugins
+		const trimmedPlugins = pluginsContent.trim();
+		let pluginToAdd = 'svelteBay()';
+		
+		if (trimmedPlugins) {
+			// Add after existing plugins with proper formatting
+			const lastPlugin = trimmedPlugins.lastIndexOf(')');
+			if (lastPlugin !== -1) {
+				// Add comma and new plugin
+				pluginToAdd = ', ' + pluginToAdd;
+			}
+		}
+		
+		// Insert the plugin
+		const before = newContent.slice(0, pluginsStart);
+		const pluginsArray = newContent.slice(pluginsStart, pluginsMatch.index! + pluginsMatch[0].length - 1);
+		const after = newContent.slice(pluginsMatch.index! + pluginsMatch[0].length - 1);
+		
+		newContent = before + pluginsArray + pluginToAdd + after;
+	}
+	
+	writeFileSync(viteConfigPath, newContent, 'utf-8');
+}
+

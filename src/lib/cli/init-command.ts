@@ -14,6 +14,9 @@ import {
 	detectPackageManager,
 	isSvelteBayInstalled,
 	getInstallCommand,
+	findViteConfig,
+	isVitePluginConfigured,
+	addVitePlugin,
 	type PackageManager
 } from './file-utils.js';
 
@@ -184,6 +187,51 @@ export async function initCommand(): Promise<void> {
 		console.log(chalk.yellow('\n→ createBay is imported but not called, adding the call...'));
 		addCreateBayCall(layoutPath, analysis);
 		console.log(chalk.green('✓ Added createBay() call'));
+	}
+
+	// Step 8: Prompt for Vite plugin setup (optional type safety)
+	const viteConfigPath = findViteConfig(projectRoot);
+
+	if (viteConfigPath) {
+		const pluginConfigured = isVitePluginConfigured(viteConfigPath);
+
+		if (!pluginConfigured) {
+			console.log(chalk.blue('\n💡 Optional: Type Safety'));
+			console.log(
+				chalk.gray(
+					'   The Vite plugin provides autocomplete for Portal names in your IDE.'
+				)
+			);
+
+			const viteResponse = await prompts({
+				type: 'confirm',
+				name: 'addPlugin',
+				message: 'Would you like to add the svelteBay Vite plugin for type safety?',
+				initial: true
+			});
+
+			if (viteResponse.addPlugin) {
+				try {
+					addVitePlugin(viteConfigPath);
+					console.log(chalk.green('✓ Added svelteBay plugin to vite.config'));
+					console.log(
+						chalk.gray(
+							'   Restart your dev server to enable Portal name autocomplete!'
+						)
+					);
+				} catch (error) {
+					console.log(
+						chalk.yellow(
+							`⚠ Could not automatically add plugin. You can add it manually:`
+						)
+					);
+					console.log(chalk.gray(`   import { svelteBay } from 'svelte-bay/vite';`));
+					console.log(chalk.gray(`   plugins: [sveltekit(), svelteBay()]`));
+				}
+			}
+		} else {
+			console.log(chalk.green('\n✓ Vite plugin is already configured'));
+		}
 	}
 
 	console.log(chalk.green.bold('\n✓ Initialization complete!'));

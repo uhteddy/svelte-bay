@@ -33,6 +33,7 @@ The CLI will:
 - ✅ Automatically install `svelte-bay` (asks which package manager to use)
 - ✅ Find your root `+layout.svelte` (or create it if missing)
 - ✅ Add the `createBay()` import and call
+- ✅ Optionally add the Vite plugin for type safety (autocomplete Portal names)
 - ✅ Handle all edge cases intelligently
 
 That's it! You're ready to use `<Portal>` and `<Pod>` components.
