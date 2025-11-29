@@ -20,9 +20,10 @@
 
   // Track state changes to the Portal content array
   // This should only change when Pods are added/removed
+  // Uses targetPortal to properly track the portal that the Pod is actually registered to
   let contentArrayChangeCount = $state(0);
   $effect(() => {
-    const _ = bayState.content[portalName];
+    const _ = bayState.content[targetPortal];
     untrack(() => {
       contentArrayChangeCount++;
     });
