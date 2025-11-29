@@ -56,11 +56,14 @@ export function findRootLayout(projectRoot: string): string | null {
 	return null;
 }
 
+// Shared regex pattern for detecting module context attribute
+const MODULE_CONTEXT_PATTERN = /context\s*=\s*["']module["']/;
+
 /**
  * Check if a script tag is a module script (has context="module")
  */
 function isModuleScript(scriptTag: string): boolean {
-	return /context\s*=\s*["']module["']/.test(scriptTag);
+	return MODULE_CONTEXT_PATTERN.test(scriptTag);
 }
 
 /**
@@ -85,11 +88,11 @@ export function analyzeSvelteFile(filePath: string): SvelteFileAnalysis {
 
 	// Find all script tags (including possible lang attribute)
 	const scriptTagRegex = /<script(\s+[^>]*)?>/gi;
-	let match;
+	const matches = content.matchAll(scriptTagRegex);
 	
-	while ((match = scriptTagRegex.exec(content)) !== null) {
+	for (const match of matches) {
 		const scriptTag = match[0];
-		const tagStart = match.index;
+		const tagStart = match.index!;
 		const contentStart = tagStart + scriptTag.length;
 		
 		// Find the corresponding closing tag
@@ -159,6 +162,34 @@ export function createLayoutWithBay(filePath: string): void {
 }
 
 /**
+ * Find a module script in the content and return its position info
+ * Returns null if no module script is found
+ */
+function findModuleScript(content: string): { start: number; end: number } | null {
+	const scriptTagRegex = /<script(\s+[^>]*)?>/gi;
+	const matches = content.matchAll(scriptTagRegex);
+	
+	for (const match of matches) {
+		const scriptTag = match[0];
+		if (!isModuleScript(scriptTag)) continue;
+		
+		const tagStart = match.index!;
+		const contentStart = tagStart + scriptTag.length;
+		
+		const closeScriptRegex = /<\/script>/i;
+		const remainingContent = content.slice(contentStart);
+		const closeMatch = remainingContent.match(closeScriptRegex);
+		
+		if (!closeMatch) continue;
+		
+		const tagEnd = contentStart + closeMatch.index! + closeMatch[0].length;
+		return { start: tagStart, end: tagEnd };
+	}
+	
+	return null;
+}
+
+/**
  * Add script tag with createBay to existing layout
  * This handles files that might have a module script - in that case,
  * the instance script is inserted after the module script.
@@ -175,14 +206,12 @@ export function addScriptTagWithBay(filePath: string): void {
 `;
 
 	// Check if there's a module script we need to insert after
-	const moduleScriptRegex = /<script\s+[^>]*context\s*=\s*["']module["'][^>]*>[\s\S]*?<\/script>/i;
-	const moduleScriptMatch = content.match(moduleScriptRegex);
+	const moduleScript = findModuleScript(content);
 	
 	let newContent: string;
-	if (moduleScriptMatch) {
+	if (moduleScript) {
 		// Insert instance script after the module script
-		const insertPos = moduleScriptMatch.index! + moduleScriptMatch[0].length;
-		newContent = content.slice(0, insertPos) + '\n\n' + instanceScript + content.slice(insertPos).trimStart();
+		newContent = content.slice(0, moduleScript.end) + '\n\n' + instanceScript + content.slice(moduleScript.end).trimStart();
 	} else {
 		// No module script, prepend to file
 		newContent = instanceScript + content;
