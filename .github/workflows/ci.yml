@@ -21,6 +21,9 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Install Playwright
+        run: bun x playwright install
+
       - name: Check
         run: bun run check
 
