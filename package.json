@@ -1,6 +1,6 @@
 {
   "name": "svelte-bay",
-  "version": "0.1.0",
+  "version": "0.1.01",
   "description": "The simplest, most developer-friendly portal system for Svelte 5. Teleport content anywhere in your app with zero config using Svelte 5 Runes.",
   "author": {
     "name": "Teddy Hartling",
