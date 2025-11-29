@@ -5,6 +5,8 @@ import TestWrapper from './components/TestWrapper.svelte';
 import TestWithPortalAndPod from './components/TestWithPortalAndPod.svelte';
 import TestMultiplePods from './components/TestMultiplePods.svelte';
 import TestMultiplePortals from './components/TestMultiplePortals.svelte';
+import TestToggleablePortal from './components/TestToggleablePortal.svelte';
+import TestReactivePodContent from './components/TestReactivePodContent.svelte';
 
 // Note: createBay and getBayState are Svelte context APIs that must be called
 // within component context. Their functionality is thoroughly tested in the
@@ -185,5 +187,67 @@ describe('Edge Cases', () => {
 		for (let i = 0; i < 10; i++) {
 			expect(text).toContain(`Pod ${i}`);
 		}
+	});
+
+	test('demounts portal content when portal is hidden', async () => {
+		const component = render(TestToggleablePortal, {
+			portalName: 'toggleable-portal',
+			content: 'Portal Content to Demount'
+		});
+
+		// Wait for initial render
+		await new Promise(resolve => setTimeout(resolve, 100));
+
+		// Verify portal and content are initially present
+		let portal = document.querySelector('[data-testid="portal"]');
+		expect(portal).toBeTruthy();
+		expect(portal?.textContent).toContain('Portal Content to Demount');
+
+		// Click button to hide the portal
+		const toggleButton = document.querySelector('[data-testid="toggle-button"]');
+		expect(toggleButton).toBeTruthy();
+		
+		// Simulate button click
+		(toggleButton as HTMLButtonElement).click();
+
+		// Wait for state update and re-render
+		await new Promise(resolve => setTimeout(resolve, 100));
+
+		// Verify portal element is now removed from DOM
+		portal = document.querySelector('[data-testid="portal"]');
+		expect(portal).toBeFalsy();
+
+	});
+
+	test('updates portal content when pod content changes', async () => {
+		const component = render(TestReactivePodContent, {
+			portalName: 'reactive-portal',
+			initialContent: 'Initial Content'
+		});
+
+		// Wait for initial render
+		await new Promise(resolve => setTimeout(resolve, 100));
+
+		// Verify initial content is displayed in the portal
+		let portal = document.querySelector('[data-testid="portal"]');
+		expect(portal).toBeTruthy();
+		expect(portal?.textContent).toContain('Initial Content');
+		expect(portal?.textContent).not.toContain('Updated Content');
+
+		// Click button to update the Pod content
+		const updateButton = document.querySelector('[data-testid="update-button"]');
+		expect(updateButton).toBeTruthy();
+		
+		// Simulate button click to change content
+		(updateButton as HTMLButtonElement).click();
+
+		// Wait for state update and re-render
+		await new Promise(resolve => setTimeout(resolve, 100));
+
+		// Verify portal now displays the updated content
+		portal = document.querySelector('[data-testid="portal"]');
+		expect(portal).toBeTruthy();
+		expect(portal?.textContent).toContain('Updated Content');
+		expect(portal?.textContent).not.toContain('Initial Content');
 	});
 });
