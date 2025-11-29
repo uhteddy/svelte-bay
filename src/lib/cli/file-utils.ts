@@ -93,7 +93,7 @@ export function analyzeSvelteFile(filePath: string): SvelteFileAnalysis {
 			const scriptContent = content.slice(analysis.scriptContentStart, analysis.scriptContentEnd);
 
 			// Check for svelte-bay imports
-			const importRegex = /import\s+{([^}]+)}\s+from\s+['"]svelte-bay['"]/;
+			const importRegex = /import\s+{([^}]+)}\s+from\s+['"]svelte-bay['"]/s;
 			const importMatch = scriptContent.match(importRegex);
 
 			if (importMatch) {
