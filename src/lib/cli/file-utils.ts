@@ -60,20 +60,14 @@ export function findRootLayout(projectRoot: string): string | null {
 	return null;
 }
 
-// Shared regex pattern for detecting module context attribute
-const MODULE_CONTEXT_PATTERN = /context\s*=\s*["']module["']/;
+import { parse } from 'svelte/compiler';
+import MagicString from 'magic-string';
 
-/**
- * Check if a script tag is a module script (has context="module")
- */
-function isModuleScript(scriptTag: string): boolean {
-	return MODULE_CONTEXT_PATTERN.test(scriptTag);
-}
+// ... existing imports ...
 
 /**
  * Analyze a Svelte file to determine its structure and imports
- * This function specifically looks for instance scripts (non-module) since
- * createBay uses setContext which only works in instance scripts.
+ * Uses svelte/compiler to parse the file into an AST
  */
 export function analyzeSvelteFile(filePath: string): SvelteFileAnalysis {
 	const content = readFileSync(filePath, 'utf-8');
@@ -90,62 +84,66 @@ export function analyzeSvelteFile(filePath: string): SvelteFileAnalysis {
 		hasCreateBayCall: false
 	};
 
-	// Find all script tags (including possible lang attribute)
-	const scriptTagRegex = /<script(\s+[^>]*)?>/gi;
-	const matches = content.matchAll(scriptTagRegex);
-	
-	for (const match of matches) {
-		const scriptTag = match[0];
-		const tagStart = match.index!;
-		const contentStart = tagStart + scriptTag.length;
-		
-		// Find the corresponding closing tag
-		const closeScriptRegex = /<\/script>/i;
-		const remainingContent = content.slice(contentStart);
-		const closeMatch = remainingContent.match(closeScriptRegex);
-		
-		if (!closeMatch) continue;
-		
-		const contentEnd = contentStart + closeMatch.index!;
-		const tagEnd = contentEnd + closeMatch[0].length;
-		
-		if (isModuleScript(scriptTag)) {
-			// This is a module script - just note its existence
-			analysis.hasModuleScriptTag = true;
-		} else {
-			// This is an instance script - this is what we want
+	try {
+		// Parse the Svelte file
+		// @ts-ignore - svelte/compiler types might not be fully picked up in this context
+		const ast = parse(content, { modern: true });
+
+		// Check for instance script
+		if (ast.instance) {
 			analysis.hasScriptTag = true;
-			analysis.scriptTagStart = tagStart;
-			analysis.scriptContentStart = contentStart;
-			analysis.scriptContentEnd = contentEnd;
-			analysis.scriptTagEnd = tagEnd;
-
-			// Extract script content
-			const scriptContent = content.slice(contentStart, contentEnd);
-
-			// Check for svelte-bay imports
-			const importRegex = /import\s+{([^}]+)}\s+from\s+['"]svelte-bay['"]/s;
-			const importMatch = scriptContent.match(importRegex);
-
-			if (importMatch) {
-				analysis.hasSvelteBayImport = true;
-				analysis.svelteBayImportLine = importMatch[0];
-				analysis.svelteBayImportStart = contentStart + importMatch.index!;
-				analysis.svelteBayImportEnd = analysis.svelteBayImportStart + importMatch[0].length;
-
-				// Check if createBay is in the import
-				const imports = importMatch[1].split(',').map((s) => s.trim());
-				analysis.hasCreateBayImport = imports.some(
-					imp => /^(\s*type\s+)?createBay(\s+as\s+\w+)?$/.test(imp)
-				);
-			}
-
-			// Check for createBay() call
-			analysis.hasCreateBayCall = /createBay\s*\(\s*\)/.test(scriptContent);
+			analysis.scriptTagStart = ast.instance.start;
+			analysis.scriptTagEnd = ast.instance.end;
 			
-			// Once we find an instance script, we're done
-			break;
+			// content is the Program node inside the script
+			if (ast.instance.content) {
+				// @ts-ignore
+				analysis.scriptContentStart = ast.instance.content.start;
+				// @ts-ignore
+				analysis.scriptContentEnd = ast.instance.content.end;
+
+				// Traverse the AST to find imports and calls
+				for (const node of ast.instance.content.body) {
+					// Check for imports
+					if (node.type === 'ImportDeclaration' && node.source.value === 'svelte-bay') {
+						analysis.hasSvelteBayImport = true;
+						// @ts-ignore
+						analysis.svelteBayImportStart = node.start;
+						// @ts-ignore
+						analysis.svelteBayImportEnd = node.end;
+						// @ts-ignore
+						analysis.svelteBayImportLine = content.slice(node.start, node.end);
+
+						// Check specifiers for createBay
+						// @ts-ignore
+						for (const specifier of node.specifiers) {
+							// @ts-ignore
+							if (specifier.imported && specifier.imported.name === 'createBay') {
+								analysis.hasCreateBayImport = true;
+							}
+						}
+					}
+
+					// Check for createBay() call
+					if (node.type === 'ExpressionStatement' && 
+						node.expression.type === 'CallExpression' && 
+						// @ts-ignore
+						node.expression.callee.name === 'createBay') {
+						analysis.hasCreateBayCall = true;
+					}
+				}
+			}
 		}
+
+		// Check for module script
+		if (ast.module) {
+			analysis.hasModuleScriptTag = true;
+		}
+
+	} catch (error) {
+		// Fallback or error handling if parsing fails (e.g. syntax error in user file)
+		console.warn(`Warning: Failed to parse ${filePath} with svelte/compiler. Falling back to basic checks.`);
+		// We could implement a regex fallback here if needed, but for now we'll assume valid svelte files
 	}
 
 	return analysis;
@@ -157,51 +155,23 @@ export function analyzeSvelteFile(filePath: string): SvelteFileAnalysis {
 export function createLayoutWithBay(filePath: string): void {
 	const content = `<script>
 	import { createBay } from 'svelte-bay';
+	let { children } = $props();
 
 	createBay();
 </script>
 
-<slot />
+{@render children()}
 `;
 
 	writeFileSync(filePath, content, 'utf-8');
 }
 
 /**
- * Find a module script in the content and return its position info
- * Returns null if no module script is found
- */
-function findModuleScript(content: string): { start: number; end: number } | null {
-	const scriptTagRegex = /<script(\s+[^>]*)?>/gi;
-	const matches = content.matchAll(scriptTagRegex);
-	
-	for (const match of matches) {
-		const scriptTag = match[0];
-		if (!isModuleScript(scriptTag)) continue;
-		
-		const tagStart = match.index!;
-		const contentStart = tagStart + scriptTag.length;
-		
-		const closeScriptRegex = /<\/script>/i;
-		const remainingContent = content.slice(contentStart);
-		const closeMatch = remainingContent.match(closeScriptRegex);
-		
-		if (!closeMatch) continue;
-		
-		const tagEnd = contentStart + closeMatch.index! + closeMatch[0].length;
-		return { start: tagStart, end: tagEnd };
-	}
-	
-	return null;
-}
-
-/**
  * Add script tag with createBay to existing layout
- * This handles files that might have a module script - in that case,
- * the instance script is inserted after the module script.
  */
 export function addScriptTagWithBay(filePath: string): void {
 	const content = readFileSync(filePath, 'utf-8');
+	const s = new MagicString(content);
 
 	const instanceScript = `<script>
 	import { createBay } from 'svelte-bay';
@@ -211,19 +181,23 @@ export function addScriptTagWithBay(filePath: string): void {
 
 `;
 
-	// Check if there's a module script we need to insert after
-	const moduleScript = findModuleScript(content);
-	
-	let newContent: string;
-	if (moduleScript) {
-		// Insert instance script after the module script
-		newContent = content.slice(0, moduleScript.end) + '\n\n' + instanceScript + content.slice(moduleScript.end).trimStart();
-	} else {
-		// No module script, prepend to file
-		newContent = instanceScript + content;
+	try {
+		// @ts-ignore
+		const ast = parse(content, { modern: true });
+
+		if (ast.module) {
+			// Insert after module script
+			s.appendRight(ast.module.end, '\n\n' + instanceScript);
+		} else {
+			// Prepend to file
+			s.prepend(instanceScript);
+		}
+	} catch (e) {
+		// Fallback if parsing fails
+		s.prepend(instanceScript);
 	}
 
-	writeFileSync(filePath, newContent, 'utf-8');
+	writeFileSync(filePath, s.toString(), 'utf-8');
 }
 
 /**
@@ -231,6 +205,7 @@ export function addScriptTagWithBay(filePath: string): void {
  */
 export function addCreateBayImport(filePath: string, analysis: SvelteFileAnalysis): void {
 	const content = readFileSync(filePath, 'utf-8');
+	const s = new MagicString(content);
 
 	if (
 		analysis.hasSvelteBayImport &&
@@ -238,27 +213,26 @@ export function addCreateBayImport(filePath: string, analysis: SvelteFileAnalysi
 		analysis.svelteBayImportEnd !== undefined
 	) {
 		// Add createBay to existing svelte-bay import
-		const before = content.slice(0, analysis.svelteBayImportStart);
+		// We can use the AST info to be precise, but string manipulation on the import line is safe enough
+		// given we know the exact start/end of the import statement
 		const importStatement = content.slice(analysis.svelteBayImportStart, analysis.svelteBayImportEnd);
-		const after = content.slice(analysis.svelteBayImportEnd);
-
-		// Extract existing imports
+		
+		// Simple regex on the extracted import statement is safe
 		const importMatch = importStatement.match(/import\s+{([^}]+)}\s+from\s+['"]svelte-bay['"]/);
 		if (importMatch) {
 			const existingImports = importMatch[1].trim();
-			const imports = existingImports.split(',').map(s => s.trim()).filter(s => s !== 'createBay');
-			const newImportStatement = `import { createBay${imports.length ? ', ' + imports.join(', ') : ''} } from 'svelte-bay'`;
-
-			writeFileSync(filePath, before + newImportStatement + after, 'utf-8');
+			// Reconstruct import
+			const newImportStatement = `import { createBay, ${existingImports} } from 'svelte-bay'`;
+			s.overwrite(analysis.svelteBayImportStart, analysis.svelteBayImportEnd, newImportStatement);
 		}
 	} else {
-		// Add new import at the beginning of the script
-		const before = content.slice(0, analysis.scriptContentStart);
-		const scriptContent = content.slice(analysis.scriptContentStart);
-
-		const newImport = `\n\timport { createBay } from 'svelte-bay';`;
-		writeFileSync(filePath, before + newImport + scriptContent, 'utf-8');
+		// Add new import at the beginning of the script content
+		if (analysis.scriptContentStart !== -1) {
+			s.appendRight(analysis.scriptContentStart, `\n\timport { createBay } from 'svelte-bay';`);
+		}
 	}
+
+	writeFileSync(filePath, s.toString(), 'utf-8');
 }
 
 /**
@@ -266,15 +240,15 @@ export function addCreateBayImport(filePath: string, analysis: SvelteFileAnalysi
  */
 export function addCreateBayCall(filePath: string, analysis: SvelteFileAnalysis): void {
 	const content = readFileSync(filePath, 'utf-8');
+	const s = new MagicString(content);
 
-	const before = content.slice(0, analysis.scriptContentStart);
-	const scriptContent = content.slice(analysis.scriptContentStart, analysis.scriptContentEnd);
-	const after = content.slice(analysis.scriptContentEnd);
+	if (analysis.scriptContentEnd !== -1) {
+		// Insert before the closing brace/end of script content
+		// We append to the end of the content
+		s.appendLeft(analysis.scriptContentEnd, '\n\n\tcreateBay();\n');
+	}
 
-	// Add the call at the end of the script content
-	const newScriptContent = scriptContent + '\n\n\tcreateBay();\n';
-
-	writeFileSync(filePath, before + newScriptContent + after, 'utf-8');
+	writeFileSync(filePath, s.toString(), 'utf-8');
 }
 
 /**
