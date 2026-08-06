@@ -7,7 +7,10 @@
     "url": "https://github.com/uhteddy"
   },
   "license": "MIT",
-  "repository": "https://github.com/uhteddy/svelte-bay",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uhteddy/svelte-bay.git"
+  },
   "homepage": "https://github.com/uhteddy/svelte-bay#readme",
   "bugs": "https://github.com/uhteddy/svelte-bay/issues",
   "bin": {
