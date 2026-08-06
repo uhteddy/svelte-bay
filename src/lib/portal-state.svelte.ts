@@ -2,8 +2,13 @@ import { setContext, getContext, type Snippet } from 'svelte';
 
 const PORTAL_KEY = Symbol('SVELTEBAYPORTAL');
 
+export interface PodEntry {
+	snippet: Snippet;
+	priority?: number;
+}
+
 export interface BayState {
-	content: Record<string, Snippet[]>;
+	content: Record<string, PodEntry[]>;
 }
 
 export const createBay = () => {
