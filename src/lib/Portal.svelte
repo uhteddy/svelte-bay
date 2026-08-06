@@ -5,10 +5,16 @@
 	let { name }: { name: PortalName } = $props();
 
 	const portalState = getBayState();
+
+	const pods = $derived(
+		portalState.content[name]
+			? [...portalState.content[name]].sort(
+					(a, b) => (a.priority ?? Infinity) - (b.priority ?? Infinity)
+				)
+			: []
+	);
 </script>
 
-{#if portalState.content[name]}
-	{#each portalState.content[name] as snippet}
-		{@render snippet()}
-	{/each}
-{/if}
+{#each pods as pod (pod.snippet)}
+	{@render pod.snippet()}
+{/each}

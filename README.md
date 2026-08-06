@@ -96,11 +96,33 @@ From _any_ component in your app, use a `<Pod />` to teleport content to a porta
 </Pod>
 ```
 
+### Ordering Pods with `priority`
+
+By default, Pods render in the order they mount. If you need a specific order, give a `<Pod />` a `priority` — lower numbers render first. Pods without a `priority` always render last, in their normal mount order.
+
+This is handy for layering a "default" Pod in a root layout that a specific page can outrank:
+
+```svelte
+<!-- +layout.svelte -->
+<Pod to="mars" priority={1}>
+  <p>Default content</p>
+</Pod>
+```
+
+```svelte
+<!-- +page.svelte -->
+<Pod to="mars">
+  <p>Page-specific content</p>
+</Pod>
+```
+
+Here, the layout's Pod (`priority={1}`) always renders before the page's unprioritized Pod, regardless of mount order.
+
 ## 💡 How it Works
 
 1. **`createBay()`**: Creates a reactive `$state` registry and shares it via `setContext`.
-2. **`<Pod />`**: Registers its `children` snippet to the registry key matching its `to` prop.
-3. **`<Portal />`**: Listens to the registry and renders all snippets registered to its `name`.
+2. **`<Pod />`**: Registers its `children` snippet, along with its optional `priority`, to the registry key matching its `to` prop.
+3. **`<Portal />`**: Listens to the registry and renders all snippets registered to its `name`, sorted by ascending `priority` (unprioritized Pods render last, in mount order).
 
 ## 🛡️ Type Safety (Optional)
 

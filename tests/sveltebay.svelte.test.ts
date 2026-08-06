@@ -7,6 +7,8 @@ import TestMultiplePods from './components/TestMultiplePods.svelte';
 import TestMultiplePortals from './components/TestMultiplePortals.svelte';
 import TestToggleablePortal from './components/TestToggleablePortal.svelte';
 import TestReactivePodContent from './components/TestReactivePodContent.svelte';
+import TestPrioritizedPods from './components/TestPrioritizedPods.svelte';
+import TestReactivePodPriority from './components/TestReactivePodPriority.svelte';
 
 // Note: createBay and getBayState are Svelte context APIs that must be called
 // within component context. Their functionality is thoroughly tested in the
@@ -137,6 +139,120 @@ describe('Portal-Pod Integration', () => {
 		
 		expect(portal2?.textContent).toContain('Footer Content');
 		expect(portal2?.textContent).not.toContain('Header Content');
+	});
+});
+
+// ====================
+// Pod Priority Tests
+// ====================
+
+describe('Pod Priority', () => {
+	test('renders prioritized Pods in ascending priority order', async () => {
+		const component = render(TestPrioritizedPods, {
+			portalName: 'priority-portal',
+			pods: [
+				{ content: 'Third', priority: 3 },
+				{ content: 'First', priority: 1 },
+				{ content: 'Second', priority: 2 }
+			]
+		});
+
+		await new Promise(resolve => setTimeout(resolve, 100));
+
+		const portal = document.querySelector('[data-testid="portal"]');
+		const text = portal?.textContent || '';
+
+		const firstIndex = text.indexOf('First');
+		const secondIndex = text.indexOf('Second');
+		const thirdIndex = text.indexOf('Third');
+
+		expect(firstIndex).toBeLessThan(secondIndex);
+		expect(secondIndex).toBeLessThan(thirdIndex);
+	});
+
+	test('un-prioritized Pods render last, after prioritized Pods, in registration order', async () => {
+		const component = render(TestPrioritizedPods, {
+			portalName: 'mixed-priority-portal',
+			pods: [
+				{ content: 'Unprioritized A' },
+				{ content: 'Prioritized', priority: 1 },
+				{ content: 'Unprioritized B' }
+			]
+		});
+
+		await new Promise(resolve => setTimeout(resolve, 100));
+
+		const portal = document.querySelector('[data-testid="portal"]');
+		const text = portal?.textContent || '';
+
+		const prioritizedIndex = text.indexOf('Prioritized');
+		const unprioritizedAIndex = text.indexOf('Unprioritized A');
+		const unprioritizedBIndex = text.indexOf('Unprioritized B');
+
+		// The prioritized pod comes first
+		expect(prioritizedIndex).toBeLessThan(unprioritizedAIndex);
+		expect(prioritizedIndex).toBeLessThan(unprioritizedBIndex);
+
+		// Unprioritized pods keep their relative registration order
+		expect(unprioritizedAIndex).toBeLessThan(unprioritizedBIndex);
+	});
+
+	test('Pod moves earlier when its priority is reactively lowered', async () => {
+		const component = render(TestReactivePodPriority, {
+			portalName: 'reactive-priority-portal',
+			initialPriority: undefined
+		});
+
+		await new Promise(resolve => setTimeout(resolve, 100));
+
+		let portal = document.querySelector('[data-testid="portal"]');
+		let text = portal?.textContent || '';
+
+		// Unprioritized "Movable" pod starts out last
+		expect(text.indexOf('Fixed A')).toBeLessThan(text.indexOf('Movable'));
+		expect(text.indexOf('Fixed B')).toBeLessThan(text.indexOf('Movable'));
+
+		const setPriorityButton = document.querySelector('[data-testid="set-priority-1"]');
+		expect(setPriorityButton).toBeTruthy();
+		(setPriorityButton as HTMLButtonElement).click();
+
+		await new Promise(resolve => setTimeout(resolve, 100));
+
+		portal = document.querySelector('[data-testid="portal"]');
+		text = portal?.textContent || '';
+
+		// After being given priority 1, "Movable" now renders first
+		expect(text.indexOf('Movable')).toBeLessThan(text.indexOf('Fixed A'));
+		expect(text.indexOf('Movable')).toBeLessThan(text.indexOf('Fixed B'));
+	});
+
+	test('Pod moves to the end when its priority is reactively cleared', async () => {
+		const component = render(TestReactivePodPriority, {
+			portalName: 'reactive-priority-clear-portal',
+			initialPriority: 1
+		});
+
+		await new Promise(resolve => setTimeout(resolve, 100));
+
+		let portal = document.querySelector('[data-testid="portal"]');
+		let text = portal?.textContent || '';
+
+		// "Movable" starts out first with priority 1
+		expect(text.indexOf('Movable')).toBeLessThan(text.indexOf('Fixed A'));
+		expect(text.indexOf('Movable')).toBeLessThan(text.indexOf('Fixed B'));
+
+		const clearPriorityButton = document.querySelector('[data-testid="clear-priority"]');
+		expect(clearPriorityButton).toBeTruthy();
+		(clearPriorityButton as HTMLButtonElement).click();
+
+		await new Promise(resolve => setTimeout(resolve, 100));
+
+		portal = document.querySelector('[data-testid="portal"]');
+		text = portal?.textContent || '';
+
+		// After losing its priority, "Movable" now renders last
+		expect(text.indexOf('Fixed A')).toBeLessThan(text.indexOf('Movable'));
+		expect(text.indexOf('Fixed B')).toBeLessThan(text.indexOf('Movable'));
 	});
 });
 
