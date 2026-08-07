@@ -14,7 +14,7 @@
   "homepage": "https://github.com/uhteddy/svelte-bay#readme",
   "bugs": "https://github.com/uhteddy/svelte-bay/issues",
   "bin": {
-    "svelte-bay": "./dist/cli.js"
+    "svelte-bay": "dist/cli.js"
   },
   "scripts": {
     "dev": "vite dev",
